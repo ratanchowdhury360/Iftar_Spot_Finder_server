@@ -34,6 +34,7 @@ async function run() {
         //database 
 
         const ifterSpotCollection = client.db("IfterSpotDB").collection("ifterSpot");
+        const reviewCollection = client.db("IfterreviewDB").collection("ifterReview");
 
 
         app.post('/ifterspot', async (req, res) => {
@@ -45,6 +46,85 @@ async function run() {
 
         app.get('/ifterspot', async (req, res) => {
             const result = await ifterSpotCollection.find().toArray();
+            res.send(result);
+        });
+
+        app.post('/review', async (req, res) => {
+            const newItem = req.body;
+            const result = await reviewCollection.insertOne(newItem);
+            res.send(result);
+        });
+        app.get('/review', async (req, res) => {
+            const result = await reviewCollection.find().toArray();
+            res.send(result);
+        });
+        app.get('/review/:id', async (req, res) => {
+            const id = req.params.id;
+            if (!isValidObjectId(id)) return res.status(400).json({ error: 'Invalid id' });
+            const query = { _id: new ObjectId(id) };
+            const result = await reviewCollection.findOne(query);
+            if (!result) return res.status(404).json({ error: 'Not found' });
+            res.send(result);
+        });
+        app.patch('/review/:id', async (req, res) => {
+            const id = req.params.id;
+            if (!isValidObjectId(id)) return res.status(400).json({ error: 'Invalid id' });
+            const updatedItem = req.body;
+            delete updatedItem._id; // prevent overwriting _id
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = { $set: updatedItem };
+            const result = await reviewCollection.updateOne(filter, updateDoc);
+            if (result.matchedCount === 0) return res.status(404).json({ error: 'Not found' });
+            const updated = await reviewCollection.findOne(filter);
+            res.send(updated);
+        });
+        app.put('/review/:id', async (req, res) => {
+            const id = req.params.id;
+            if (!isValidObjectId(id)) return res.status(400).json({ error: 'Invalid id' });
+            const updatedItem = req.body;
+            delete updatedItem._id; // prevent overwriting _id
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = { $set: updatedItem };
+            const result = await reviewCollection.updateOne(filter, updateDoc);
+            if (result.matchedCount === 0) return res.status(404).json({ error: 'Not found' });
+            const updated = await reviewCollection.findOne(filter);
+            res.send(updated);
+        });
+        app.delete('/review/:id', async (req, res) => {
+            const id = req.params.id;
+            if (!isValidObjectId(id)) return res.status(400).json({ error: 'Invalid id' });
+            const query = { _id: new ObjectId(id) };
+            const result = await reviewCollection.deleteOne(query);
+            if (result.deletedCount === 0) return res.status(404).json({ error: 'Not found' });
+            res.send(result);
+        });
+        app.get('/review/user/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email: email };
+            const result = await reviewCollection.find(query).toArray();
+            res.send(result);
+        });
+        app.delete('/review/user/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email: email };
+            const result = await reviewCollection.deleteMany(query);
+            res.send(result);
+        }); 
+        app.post('/review', async (req, res) => {
+            const newItem = req.body;
+            const result = await reviewCollection.insertOne(newItem);
+            res.send(result);
+        });
+        app.get('/review', async (req, res) => {
+            const result = await reviewCollection.find().toArray();
+            res.send(result);
+        });
+        app.get('/review/:id', async (req, res) => {
+            const id = req.params.id;
+            if (!isValidObjectId(id)) return res.status(400).json({ error: 'Invalid id' });
+            const query = { _id: new ObjectId(id) };
+            const result = await reviewCollection.findOne(query);
+            if (!result) return res.status(404).json({ error: 'Not found' });
             res.send(result);
         });
 
@@ -64,7 +144,7 @@ async function run() {
             }
         });
 
-        app.patch('/ifterspot/:id', async (req, res) => {
+        const handleUpdateSpot = async (req, res) => {
             try {
                 const id = req.params.id;
                 if (!isValidObjectId(id)) return res.status(400).json({ error: 'Invalid id' });
@@ -74,11 +154,14 @@ async function run() {
                 const updateDoc = { $set: updatedItem };
                 const result = await ifterSpotCollection.updateOne(filter, updateDoc);
                 if (result.matchedCount === 0) return res.status(404).json({ error: 'Not found' });
-                res.send(result);
+                const updated = await ifterSpotCollection.findOne(filter);
+                res.send(updated);
             } catch (err) {
                 res.status(500).json({ error: err.message });
             }
-        });
+        };
+        app.patch('/ifterspot/:id', handleUpdateSpot);
+        app.put('/ifterspot/:id', handleUpdateSpot);
 
         app.delete('/ifterspot/:id', async (req, res) => {
             try {
