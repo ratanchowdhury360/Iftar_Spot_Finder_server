@@ -121,6 +121,7 @@ async function run() {
             res.send(result);
         });
 
+        console.log('Registering review routes');
         app.post('/review', async (req, res) => {
             const newItem = req.body;
             const result = await reviewCollection.insertOne(newItem);
@@ -253,6 +254,29 @@ app.get('/', (req, res) => {
     res.send('Hello World!')
 })
 
-app.listen(port, () => {
-    console.log(`This project is running on port ${port}`)
-})
+// Diagnostic endpoint: list registered routes
+app.get('/_routes', (req, res) => {
+    const routes = [];
+    app._router.stack.forEach((m) => {
+        if (m.route && m.route.path) {
+            routes.push({ path: m.route.path, methods: Object.keys(m.route.methods) });
+        } else if (m.name === 'router' && m.handle && m.handle.stack) {
+            m.handle.stack.forEach((n) => {
+                if (n.route && n.route.path) {
+                    routes.push({ path: n.route.path, methods: Object.keys(n.route.methods) });
+                }
+            });
+        }
+    });
+    res.json(routes);
+});
+
+// Only start a local server when not running on Vercel (serverless)
+if (!process.env.VERCEL) {
+    app.listen(port, () => {
+        console.log(`This project is running on port ${port}`)
+    })
+}
+
+// Export the app so Vercel's @vercel/node can use it as a serverless handler
+module.exports = app;
