@@ -35,7 +35,79 @@ async function run() {
 
         const ifterSpotCollection = client.db("IfterSpotDB").collection("ifterSpot");
         const reviewCollection = client.db("IfterreviewDB").collection("ifterReview");
+        const commentCollection = client.db("CommentDB").collection("comments");
 
+        // Validate 24-char hex ObjectId (used by comment & ifterspot routes)
+        const isValidObjectId = (id) => /^[a-fA-F0-9]{24}$/.test(id);
+
+        // Comment APIs
+        app.post('/comment', async (req, res) => {
+            const newItem = req.body;
+            const result = await commentCollection.insertOne(newItem);
+            const inserted = await commentCollection.findOne({ _id: result.insertedId });
+            res.send(inserted);
+        });
+        app.get('/comment', async (req, res) => {
+            const result = await commentCollection.find().toArray();
+            res.send(result);
+        });
+        app.get('/comment/spot/:spotId', async (req, res) => {
+            const spotId = req.params.spotId;
+            const result = await commentCollection.find({ spotId }).sort({ createdAt: 1 }).toArray();
+            res.send(result);
+        });
+        app.get('/comment/:id', async (req, res) => {
+            const id = req.params.id;
+            if (!isValidObjectId(id)) return res.status(400).json({ error: 'Invalid id' });
+            const query = { _id: new ObjectId(id) };
+            const result = await commentCollection.findOne(query);
+            if (!result) return res.status(404).json({ error: 'Not found' });
+            res.send(result);
+        });
+        app.patch('/comment/:id', async (req, res) => {
+            const id = req.params.id;
+            if (!isValidObjectId(id)) return res.status(400).json({ error: 'Invalid id' });
+            const updatedItem = req.body;
+            delete updatedItem._id; // prevent overwriting _id
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = { $set: updatedItem };
+            const result = await commentCollection.updateOne(filter, updateDoc);
+            if (result.matchedCount === 0) return res.status(404).json({ error: 'Not found' });
+            const updated = await commentCollection.findOne(filter);
+            res.send(updated);
+        });
+        app.put('/comment/:id', async (req, res) => {
+            const id = req.params.id;
+            if (!isValidObjectId(id)) return res.status(400).json({ error: 'Invalid id' });
+            const updatedItem = req.body;
+            delete updatedItem._id; // prevent overwriting _id
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = { $set: updatedItem };
+            const result = await commentCollection.updateOne(filter, updateDoc);
+            if (result.matchedCount === 0) return res.status(404).json({ error: 'Not found' });
+            const updated = await commentCollection.findOne(filter);
+            res.send(updated);
+        });
+        app.delete('/comment/:id', async (req, res) => {
+            const id = req.params.id;
+            if (!isValidObjectId(id)) return res.status(400).json({ error: 'Invalid id' });
+            const query = { _id: new ObjectId(id) };
+            const result = await commentCollection.deleteOne(query);
+            if (result.deletedCount === 0) return res.status(404).json({ error: 'Not found' });
+            res.send(result);
+        });
+        app.get('/comment/user/:email', async (req, res) => {   
+            const email = req.params.email;
+            const query = { email: email };
+            const result = await commentCollection.find(query).toArray();
+            res.send(result);
+        });
+        app.delete('/comment/user/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email: email };
+            const result = await commentCollection.deleteMany(query);
+            res.send(result);
+        });
 
         app.post('/ifterspot', async (req, res) => {
             const newItem = req.body;
@@ -110,9 +182,6 @@ async function run() {
             const result = await reviewCollection.deleteMany(query);
             res.send(result);
         });
-
-        // Validate 24-char hex ObjectId
-        const isValidObjectId = (id) => /^[a-fA-F0-9]{24}$/.test(id);
 
         app.get('/ifterspot/:id', async (req, res) => {
             try {
