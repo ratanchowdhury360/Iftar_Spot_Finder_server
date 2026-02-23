@@ -109,23 +109,6 @@ async function run() {
             const query = { email: email };
             const result = await reviewCollection.deleteMany(query);
             res.send(result);
-        }); 
-        app.post('/review', async (req, res) => {
-            const newItem = req.body;
-            const result = await reviewCollection.insertOne(newItem);
-            res.send(result);
-        });
-        app.get('/review', async (req, res) => {
-            const result = await reviewCollection.find().toArray();
-            res.send(result);
-        });
-        app.get('/review/:id', async (req, res) => {
-            const id = req.params.id;
-            if (!isValidObjectId(id)) return res.status(400).json({ error: 'Invalid id' });
-            const query = { _id: new ObjectId(id) };
-            const result = await reviewCollection.findOne(query);
-            if (!result) return res.status(404).json({ error: 'Not found' });
-            res.send(result);
         });
 
         // Validate 24-char hex ObjectId
